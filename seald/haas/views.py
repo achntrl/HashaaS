@@ -1,5 +1,8 @@
+from django.contrib.auth import authenticate
 from django.contrib.auth.models import User, Group
 from rest_framework import status, viewsets
+from rest_framework.authtoken.models import Token
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -30,6 +33,23 @@ class UserRegister(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class UserLogin(APIView):
+    """
+    Creates the user.
+    """
+
+    def post(self, request, format='json'):
+        username = request.data.get("username")
+        password = request.data.get("password")
+
+        user = authenticate(username=username, password=password)
+        if not user:
+            return Response({"error": "Login failed"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        token, _ = Token.objects.get_or_create(user=user)
+        return Response({"token": token.key})
+
+
 class GroupViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows groups to be viewed or edited.
@@ -46,6 +66,8 @@ class DummyHashView(APIView):
 
 
 class HashView(APIView):
+    permission_classes = (IsAuthenticated,)
+
     def post(self, request, *args, **kw):
         data = request.data.get('data', None)
         iteration = request.data.get('iteration', None)
