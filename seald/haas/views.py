@@ -4,6 +4,7 @@ from rest_framework import status, viewsets
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 
 from haas.serializers import UserSerializer, GroupSerializer
@@ -67,6 +68,7 @@ class DummyHashView(APIView):
 
 class HashView(APIView):
     permission_classes = (IsAuthenticated,)
+    throttle_classes = (UserRateThrottle,)
 
     def post(self, request, *args, **kw):
         data = request.data.get('data', None)
