@@ -2,6 +2,8 @@ from django.contrib.auth.models import User, Group
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
+from haas.models import Statistics
+
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
@@ -30,3 +32,9 @@ class GroupSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Group
         fields = ('url', 'name')
+
+
+class StatisticsSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Statistics
+        fields = ('id', 'user', 'algorithm', 'iterations', 'data')

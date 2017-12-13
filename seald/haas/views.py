@@ -7,8 +7,9 @@ from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 
-from haas.serializers import UserSerializer, GroupSerializer
+from haas.serializers import UserSerializer, GroupSerializer, StatisticsSerializer
 from haas.hashers import DummyHasher, Md5Hasher, Sha1Hasher, Sha256Hasher
+from haas.models import Statistics
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -71,34 +72,47 @@ class HashView(APIView):
     throttle_classes = (UserRateThrottle,)
 
     def post(self, request, *args, **kw):
-        data = request.data.get('data', None)
-        iteration = request.data.get('iteration', None)
+        data = request.data.get('data', None)  # TODO: Add validation on input length
+        iterations = request.data.get('iterations', None)
         algorithm = request.data.get('algorithm', None)
 
-        if (data is None or iteration is None or algorithm is None):
+        if (data is None or iterations is None or algorithm is None):
             return Response(
-                'Bad request, POST data should be {"data": "seald is awesome", "algorithm": "md5", "iteration": 1}',
+                'Bad request, POST data should be {"data": "seald is awesome", "algorithm": "md5", "iterations": 1}',
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         try:
-            int(iteration)
+            int(iterations)
         except:
             return Response(
-                '"iteration" should be an integer',
+                '"iterations" should be an integer',
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         if algorithm.lower() == 'md5':
-            hasher = Md5Hasher(data, int(iteration))
+            hasher = Md5Hasher(data, int(iterations))
         elif algorithm.lower() == 'sha1':
-            hasher = Sha1Hasher(data, int(iteration))
+            hasher = Sha1Hasher(data, int(iterations))
         elif algorithm.lower() == 'sha256':
-            hasher = Sha256Hasher(data, int(iteration))
+            hasher = Sha256Hasher(data, int(iterations))
         else:
             return Response(
                 '"algorithm" should be md5, sha1 or sha256',
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        statistics = Statistics(user=request.user, algorithm=algorithm, data=data, iterations=iterations)
+        statistics.save()
+
         return Response({'hash': hasher.hash()})
+
+
+class StatisticsView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, format='json'):
+        statistics = request.user.statistics_set.all()
+        serializer = StatisticsSerializer(statistics, many=True, context={'request': request})
+
+        return Response(serializer.data)
